@@ -2,4 +2,4 @@ Config/config.json
 Config/refresh_token.dat
 Logs/
 Staging/
-Tools/
+.claude/
