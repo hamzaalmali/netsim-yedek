@@ -1,6 +1,6 @@
 {
   "name": "netsim-yedekleme",
-  "version": "3.0.0",
+  "version": "3.0.1",
   "description": "Netsim Otomasyon veritabani dosyalarini gunluk olarak Google Drive'a ve ek konumlara yedekleyen sistem tepsisi uygulamasi",
   "main": "src/main.js",
   "author": "Netsim Yedekleme",
@@ -8,6 +8,7 @@
   "private": true,
   "scripts": {
     "start": "electron .",
+    "postinstall": "node scripts/fix-archiver-utils.js",
     "dist": "electron-builder"
   },
   "dependencies": {
@@ -21,6 +22,7 @@
   "build": {
     "appId": "com.netsim.yedekleme",
     "productName": "Netsim Yedekleme",
+    "npmRebuild": false,
     "directories": {
       "output": "release"
     },
