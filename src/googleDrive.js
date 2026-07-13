@@ -11,8 +11,19 @@ const SCOPE = 'https://www.googleapis.com/auth/drive.file';
 const REDIRECT_PORT = 8977;
 const REDIRECT_URI = `http://127.0.0.1:${REDIRECT_PORT}/`;
 
+let activeServer = null;
+
 function authorize(clientId, clientSecret) {
   return new Promise((resolve, reject) => {
+    if (activeServer) {
+      try {
+        activeServer.close();
+      } catch {
+        /* already closed */
+      }
+      activeServer = null;
+    }
+
     let settled = false;
     const server = http.createServer((req, res) => {
       const url = new URL(req.url, REDIRECT_URI);
@@ -27,6 +38,22 @@ function authorize(clientId, clientSecret) {
       }
       exchangeCode(code, clientId, clientSecret).then(resolve).catch(reject);
     });
+    activeServer = server;
+
+    server.on('close', () => {
+      if (activeServer === server) activeServer = null;
+    });
+
+    server.on('error', (err) => {
+      if (settled) return;
+      settled = true;
+      if (err.code === 'EADDRINUSE') {
+        reject(new Error('Yetkilendirme baglantisi zaten acik. Lutfen tarayicidaki islemi tamamlayin ya da birkac saniye bekleyip tekrar deneyin.'));
+      } else {
+        reject(err);
+      }
+    });
+
     server.listen(REDIRECT_PORT, '127.0.0.1', () => {
       const authUrl =
         `${AUTH_URL}?client_id=${encodeURIComponent(clientId)}` +

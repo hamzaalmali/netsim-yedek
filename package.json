@@ -1,6 +1,6 @@
 {
   "name": "netsim-yedekleme",
-  "version": "3.0.1",
+  "version": "3.0.2",
   "description": "Netsim Otomasyon veritabani dosyalarini gunluk olarak Google Drive'a ve ek konumlara yedekleyen sistem tepsisi uygulamasi",
   "main": "src/main.js",
   "author": "Netsim Yedekleme",
