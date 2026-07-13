@@ -11,7 +11,7 @@ function showToast(message, type = '') {
   clearTimeout(showToast._t);
   showToast._t = setTimeout(() => {
     toast.className = 'toast';
-  }, 3500);
+  }, type === 'error' ? 9000 : 3500);
 }
 
 function renderExtraList() {
@@ -73,6 +73,10 @@ function setDriveStatus(connected) {
   const el = $('driveStatus');
   el.textContent = connected ? 'Durum: Bir Google hesabina bagli.' : 'Durum: Henuz bagli degil.';
   el.className = 'status-line ' + (connected ? 'ok' : 'warn');
+
+  $('driveCredFields').style.display = connected ? 'none' : '';
+  $('btnConnectDrive').style.display = connected ? 'none' : '';
+  $('btnTestDrive').style.display = connected ? '' : 'none';
 }
 
 async function loadRunningApps(selectedPath) {
@@ -209,7 +213,7 @@ function wireEvents() {
     showToast('Tarayicida Google hesabinizla giris yapin...');
     try {
       await window.api.connectDrive({ clientId, clientSecret });
-      setDriveStatus(true);
+      await loadConfig();
       showToast('Google Drive baglandi.', 'success');
     } catch (e) {
       showToast('Baglanti basarisiz: ' + e.message, 'error');
@@ -228,7 +232,7 @@ function wireEvents() {
 
   $('btnDisconnectDrive').addEventListener('click', async () => {
     await window.api.disconnectDrive();
-    setDriveStatus(false);
+    await loadConfig();
     showToast('Baglanti kaldirildi.');
   });
 

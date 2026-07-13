@@ -63,9 +63,12 @@ function load() {
 }
 
 function save(cfg) {
-  const dir = path.dirname(configPath());
+  const finalPath = configPath();
+  const dir = path.dirname(finalPath);
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-  fs.writeFileSync(configPath(), JSON.stringify(cfg, null, 2), 'utf-8');
+  const tmpPath = finalPath + '.tmp';
+  fs.writeFileSync(tmpPath, JSON.stringify(cfg, null, 2), 'utf-8');
+  fs.renameSync(tmpPath, finalPath);
 }
 
 function encryptSecret(plain) {
