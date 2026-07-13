@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8" />
+<title>Netsim Yedekleme</title>
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+<header class="header">
+  <div class="brand">
+    <div class="brand-mark">N</div>
+    <div class="brand-name">Netsim Yedekleme</div>
+  </div>
+  <div class="version" id="lblVersion">v0.0.0</div>
+</header>
+
+<div class="update-banner" id="updateBanner">
+  <span id="updateText">Yeni bir surum mevcut.</span>
+  <button class="btn btn-secondary btn-sm" id="btnUpdateOpen">GitHub'da Ac</button>
+</div>
+
+<main class="body">
+
+  <section class="card">
+    <h2 class="card-title">Program ve Veri</h2>
+
+    <label class="field-label">Veri klasoru (yedeklenecek fdb dosyalarinin oldugu yer)</label>
+    <div class="row">
+      <input type="text" id="tbSource" class="input" readonly placeholder="Ornek: E:\Ofisnet\Data" />
+      <button class="btn btn-secondary" id="btnBrowseSource">Goz At...</button>
+    </div>
+
+    <label class="field-label">Yedekleme oncesi kapatilacak program</label>
+    <div class="row">
+      <select id="selProcess" class="input"><option value="">-- Calisan uygulamalardan secin --</option></select>
+      <button class="btn btn-secondary" id="btnRefreshProcesses">Yenile</button>
+    </div>
+    <div class="row" style="margin-top:8px;">
+      <input type="text" id="tbExe" class="input" readonly placeholder="Secilen program yolu" />
+      <button class="btn btn-secondary" id="btnBrowseExe">Goz At...</button>
+    </div>
+
+    <label class="field-label">Firebird Windows servis adi (varsa; yoksa bos birakin)</label>
+    <input type="text" id="tbFirebird" class="input" placeholder="Ornek: FirebirdServerDefaultInstance" />
+  </section>
+
+  <section class="card">
+    <h2 class="card-title">Zamanlama</h2>
+
+    <label class="field-label">Gunluk yedekleme saati</label>
+    <input type="time" id="tbTime" class="input input-sm" value="23:30" />
+
+    <div class="toggle-row">
+      <label class="toggle">
+        <input type="checkbox" id="chkRestart" />
+        <span class="slider"></span>
+      </label>
+      <span>Yedekten sonra programi otomatik yeniden baslat</span>
+    </div>
+
+    <label class="field-label">Saklanacak yedek sayisi (rotasyon, her hedef icin)</label>
+    <input type="number" id="numRetention" class="input input-sm" min="1" max="365" value="5" />
+  </section>
+
+  <section class="card">
+    <div class="card-header-row">
+      <h2 class="card-title">Google Drive</h2>
+      <span class="badge" id="badgeDrive">opsiyonel</span>
+    </div>
+    <div class="toggle-row">
+      <label class="toggle">
+        <input type="checkbox" id="chkDrive" />
+        <span class="slider"></span>
+      </label>
+      <span>Yedekleri Google Drive'a da yukle</span>
+    </div>
+
+    <div id="driveFields">
+      <label class="field-label">Drive klasor adi</label>
+      <input type="text" id="tbDriveFolder" class="input" placeholder="Netsim Yedekler" />
+
+      <label class="field-label">Google Drive Client ID</label>
+      <input type="text" id="tbClientId" class="input" />
+
+      <label class="field-label">Google Drive Client Secret</label>
+      <input type="password" id="tbClientSecret" class="input" />
+
+      <div class="status-line" id="driveStatus">Durum: Henuz bagli degil.</div>
+
+      <div class="row">
+        <button class="btn btn-secondary" id="btnConnectDrive">Google Drive'a Bagla</button>
+        <button class="btn btn-secondary" id="btnTestDrive">Baglantiyi Test Et</button>
+        <button class="btn btn-ghost" id="btnDisconnectDrive">Hesabi Degistir</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-header-row">
+      <h2 class="card-title">E-posta Bildirimleri</h2>
+      <span class="badge">opsiyonel</span>
+    </div>
+    <div class="toggle-row">
+      <label class="toggle">
+        <input type="checkbox" id="chkEmail" />
+        <span class="slider"></span>
+      </label>
+      <span>Yedekleme sonrasi e-posta gonder</span>
+    </div>
+
+    <div id="emailFields">
+      <label class="field-label">Gonderen Gmail adresi</label>
+      <input type="text" id="tbSenderEmail" class="input" placeholder="ornek@gmail.com" />
+
+      <label class="field-label">Uygulama Sifresi (Gmail App Password)</label>
+      <input type="password" id="tbAppPassword" class="input" />
+
+      <label class="field-label">Alici e-posta(lar) (virgulle ayirin)</label>
+      <input type="text" id="tbRecipients" class="input" placeholder="ornek1@gmail.com, ornek2@gmail.com" />
+
+      <div class="toggle-row">
+        <label class="toggle"><input type="checkbox" id="chkNotifySuccess" /><span class="slider"></span></label>
+        <span>Basarili oldugunda bildir</span>
+      </div>
+      <div class="toggle-row">
+        <label class="toggle"><input type="checkbox" id="chkNotifyFailure" /><span class="slider"></span></label>
+        <span>Basarisiz oldugunda bildir</span>
+      </div>
+
+      <div class="row">
+        <button class="btn btn-secondary" id="btnTestEmail">Test E-postasi Gonder</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-header-row">
+      <h2 class="card-title">Ek Yedekleme Konumlari</h2>
+      <span class="badge">opsiyonel</span>
+    </div>
+    <p class="hint">Yerel bir klasor veya <code>\\SUNUCU\Paylasim\Yedekler</code> gibi bir ag yolu ekleyebilirsiniz.</p>
+    <div id="extraList" class="extra-list"></div>
+    <div class="row">
+      <button class="btn btn-secondary" id="btnAddFolder">Klasor Ekle</button>
+      <button class="btn btn-secondary" id="btnAddNetwork">Ag Yolu Ekle</button>
+    </div>
+  </section>
+
+  <div class="toggle-row" style="margin: 4px 4px 24px;">
+    <label class="toggle">
+      <input type="checkbox" id="chkAutoStart" />
+      <span class="slider"></span>
+    </label>
+    <span>Windows'a giriste otomatik baslat</span>
+  </div>
+
+</main>
+
+<footer class="action-bar">
+  <div class="last-run" id="lblLastRun">Henuz yedek alinmadi.</div>
+  <div class="row">
+    <button class="btn btn-secondary" id="btnBackupNow">Simdi Yedekle</button>
+    <button class="btn btn-primary" id="btnSave">Kaydet</button>
+  </div>
+</footer>
+
+<div class="modal-overlay" id="promptOverlay">
+  <div class="modal">
+    <h3 id="promptTitle">Ag Yolu Ekle</h3>
+    <input type="text" id="promptInput" class="input" placeholder="\\SUNUCU\Paylasim\Yedekler" />
+    <div class="row modal-actions">
+      <button class="btn btn-ghost" id="promptCancel">Vazgec</button>
+      <button class="btn btn-primary" id="promptOk">Ekle</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="renderer.js"></script>
+</body>
+</html>

@@ -1,85 +1,96 @@
 # Netsim Yedekleme
 
-Netsim Otomasyon Sistemi'nin veritabani dosyalarini (`.fdb`) her gun belirlediginiz saatte otomatik olarak yedekleyen, sistem tepsisinde (saatin yaninda) yasayan bir masaustu uygulamasi.
+Netsim Otomasyon Sistemi'nin veritabani dosyalarini (`.fdb`) her gun belirlediginiz saatte otomatik olarak yedekleyen bir Windows masaustu uygulamasi. Electron ile yazilmistir: gercek bir `.exe` kurulum dosyasi (installer) uretir, sistem tepsisinde (saatin yaninda) yasar, arka planda gorunur bir konsol/terminal penceresi olmadan calisir.
 
 ## Nasil calisir
 
-1. Uygulamayi acarsiniz (bkz. asagidaki "Ilk calistirma"), acilan pencereden ayarlari girip **Kaydet**'e basarsiniz.
-2. Pencereyi kapatma (X) tusuna bastiginizda uygulama kapanmaz, sistem tepsisine (saatin yanina) kucultup arka planda calismaya devam eder.
-3. Belirlediginiz saatte otomatik olarak:
-   - Program calisiyorsa once duzgunce (gerekirse zorla) kapatilir.
+1. Kurulum dosyasini calistirip programi kurarsiniz (Baslat Menusu ve masaustu kisayolu olusur).
+2. Uygulama acilir, ayarlari girip **Kaydet**'e basarsiniz.
+3. Pencereyi kapatma (X) tusuna bastiginizda uygulama kapanmaz, sistem tepsisine kucultup arka planda calismaya devam eder.
+4. Belirlediginiz saatte otomatik olarak:
+   - Sectiginiz program (calisan uygulamalar listesinden veya elle) once duzgunce (gerekirse zorla) kapatilir.
    - Veri klasoru zip'lenir.
-   - Program otomatik yeniden acilir (istege bagli, ayarlardan kapatilabilir).
-   - Zip, secilen hedeflere gonderilir: Google Drive (opsiyonel) ve/veya belirttiginiz yerel klasor(ler)/ag yollari (opsiyonel). Hangisini kullanacaginiz tamamen size baglidir; sadece ag yoluna kopyalamak isterseniz Google Drive'i hic ayarlamaniza gerek yok.
+   - Program otomatik yeniden acilir (istege bagli).
+   - Zip, secilen hedeflere gonderilir: Google Drive (opsiyonel) ve/veya belirttiginiz yerel klasor(ler)/ag yollari (opsiyonel).
+   - Basarili/basarisiz oldugunda istege bagli olarak e-posta bildirimi gonderilir.
    - Her hedefte son **N** yedek tutulur, daha eskisi otomatik silinir.
-4. Uygulama, tepsi simgesine **sag tiklayip "Cikis"** demediginiz surece calismaya devam eder. Windows'a her giriste otomatik baslamasini isterseniz pencere icindeki "Windows'a giriste otomatik baslat" kutusunu isaretlemeniz yeterli.
-5. Pencereyi her actiginizda, GitHub'daki depoda yeni bir surum olup olmadigi kontrol edilir; varsa ekranda sari bir uyari seridi cikar.
+5. Uygulama, tepsi simgesine **sag tiklayip "Cikis"** demediginiz surece calismaya devam eder. Windows'a her giriste otomatik baslamasini isterseniz ayarlar ekranindaki "Windows'a giriste otomatik baslat" anahtarini acmaniz yeterli (Electron'un kendi `openAtLogin` mekanizmasini kullanir, ek bir kisayol/script gerekmez).
+6. Pencereyi her actiginizda, GitHub'daki en son surumle karsilastirilir; yeni bir surum varsa sari bir bildirim seridi cikar.
 
-## Klasor yapisi
+## Proje yapisi
 
 ```
 netsimYedek/
-  Netsim-Yedekleme-Baslat.vbs   -> uygulamayi konsol penceresi acmadan baslatan kisayol
-  VERSION.txt                    -> surum numarasi (guncelleme kontrolu icin)
-  Scripts/
-    TrayApp.ps1                  -> ana uygulama: pencere + sistem tepsisi + zamanlayici
-    Common.ps1                   -> ortak fonksiyonlar (log, config, Google Drive API cagrilari)
-    Backup-Engine.ps1            -> tek seferlik yedekleme mantigi
-    Connect-GoogleDrive.ps1      -> Google hesabi ile bir kerelik yetkilendirme (tarayici acar)
-  Config/
-    config.json                  -> ayarlar (uygulama tarafindan olusturulur)
-    refresh_token.dat             -> Google Drive baglantisi (sifreli, makineye bagli)
-  Logs/                          -> gunluk yedekleme kayitlari
-  Staging/                       -> yerelde olusturulan zip dosyalari
+  package.json
+  build/                  -> uygulama ikonlari (icon.ico, icon.png, tray.png)
+  src/
+    main.js                -> Electron ana sureci: pencere, tepsi simgesi, zamanlayici, IPC
+    preload.js              -> renderer'a guvenli API koprusu
+    config.js                -> ayarlarin okunmasi/yazilmasi, sifreli sir saklama (Electron safeStorage)
+    backup.js                 -> yedekleme mantigi (sureci kapat/ac, zip, kopyala, rotasyon, e-posta)
+    googleDrive.js             -> Google OAuth ve Drive REST API cagrilari
+    processes.js                -> calisan uygulamalari listeleme (Yenile butonu icin)
+    email.js                     -> e-posta bildirimi (nodemailer, Gmail)
+  renderer/
+    index.html, styles.css, renderer.js  -> ayar ekrani arayuzu
 ```
 
-## Ilk calistirma
+Kullanici ayarlari ve loglar uygulamanin kendi veri klasorunde tutulur (`%APPDATA%\netsim-yedekleme\`), kurulum klasorunden bagimsizdir.
 
-1. Bu klasoru Windows makinesine kopyalayin (bkz. asagida "Guncelleme").
-2. `Netsim-Yedekleme-Baslat.vbs` dosyasina cift tiklayin. Herhangi bir konsol penceresi acilmaz; sistem tepsisinde mavi "N" simgesi belirir ve ayni anda ayar penceresi acilir (ilk calistirmada config olmadigi icin otomatik acilir).
-3. Ayar penceresinde:
-   - **Veri klasoru**: "Goz At..." ile `E:\Ofisnet\Data` gibi yedeklenecek klasoru secin.
-   - **Ofisnet.exe yolu**: "Goz At..." ile programin exe dosyasini secin.
-   - **Firebird servis adi**: bkz. asagida "Onemli not: veritabani dosyasi kilidi".
-   - **Zamanlama**: gunluk yedekleme saati, yedekten sonra otomatik yeniden baslatma, saklanacak yedek sayisi.
-   - **Google Drive (opsiyonel)**: kullanmak isterseniz kutuyu isaretleyip Client ID/Secret girin (bkz. asagida), istemiyorsaniz bos/isaretsiz birakabilirsiniz.
-   - **Ek Yedekleme Konumlari (opsiyonel)**: yerel bir klasor veya `\\SUNUCU\Paylasim\Yedekler` gibi bir ag yolu ekleyip isaretleyebilirsiniz. Google Drive kullanmadan sadece bunu da kullanabilirsiniz.
-   - En az bir hedef (Drive veya ek konum) secili olmadan kaydetmeye calisirsanız uygulama uyarir.
-4. **Kaydet**'e basin. Pencereyi kapatirsaniz uygulama tepsiye kucultur, calismaya devam eder.
-5. **Simdi Yedekle** butonu ile bir test yedeklemesi yapip `Logs` klasorunu ve hedef(ler)i kontrol edin.
-6. "Windows'a giriste otomatik baslat" kutusunu isaretleyin — boylece bilgisayar her acildiginda uygulama sessizce tepsiden baslar, tekrar cift tiklamaniza gerek kalmaz.
+## Gelistirme / kaynak koddan calistirma
+
+```
+npm install
+npm start
+```
+
+## Kurulum dosyasi (.exe) uretme
+
+```
+npm run dist
+```
+
+Bu komut `electron-builder` ile `release\Netsim Yedekleme Setup <surum>.exe` adinda gercek bir NSIS kurulum dosyasi uretir (Baslat Menusu + masaustu kisayolu olusturur, kaldirma araciyla birlikte gelir). Kod imzalama sertifikasi olmadigi icin ilk calistirmada Windows SmartScreen "Bilinmeyen yayimci" uyarisi gosterebilir — "Yine de calistir" ile devam edilebilir; bu, internal/kisisel kullanim icin normal bir durumdur.
+
+## Ilk calistirma / ayarlar
+
+1. Kurulum dosyasini calistirin, uygulama acilsin.
+2. **Program ve Veri**: "Goz At..." ile veri klasorunu (`E:\Ofisnet\Data`) secin. Kapatilacak programi ya calisan uygulamalar listesinden secin (Yenile ile listeyi tazeleyebilirsiniz) ya da "Goz At..." ile elle secin.
+3. **Zamanlama**: gunluk saat, yedekten sonra otomatik yeniden baslatma, saklanacak yedek sayisi.
+4. **Google Drive (opsiyonel)**: kullanmak isterseniz anahtari acip Client ID/Secret girin (bkz. asagida), istemiyorsaniz kapali birakin.
+5. **E-posta Bildirimleri (opsiyonel)**: Gmail adresiniz ve bir "Uygulama Sifresi" (App Password) ile yedekleme sonucu hakkinda bildirim alabilirsiniz.
+6. **Ek Yedekleme Konumlari (opsiyonel)**: yerel bir klasor veya `\\SUNUCU\Paylasim\Yedekler` gibi bir ag yolu ekleyebilirsiniz.
+7. En az bir hedef (Google Drive veya ek konum) secili olmadan kaydetmeye calisirsaniz uygulama uyarir.
+8. **Kaydet**, ardindan **Simdi Yedekle** ile bir test yapip sonucu kontrol edin.
 
 ## Google Drive kullanmak isterseniz
-
-Google Drive API'ye erisim icin bir defaya mahsus bir OAuth istemcisi (Client ID / Client Secret) olusturmaniz gerekiyor:
 
 1. https://console.cloud.google.com adresinde yeni bir proje olusturun.
 2. **APIs & Services > Library** > "Google Drive API" > **Enable**.
 3. **APIs & Services > OAuth consent screen**: User Type **External**, uygulama adi girin, **Test users** kismina yedekleyecek Google hesabinizi ekleyin.
 4. **APIs & Services > Credentials > Create Credentials > OAuth client ID**: Application type **Desktop app**. Cikan **Client ID** ve **Client Secret** degerlerini not alin.
-5. Ayar penceresinde Google Drive kutusunu isaretleyip bu degerleri girin, **Google Drive'a Bagla** ile tarayicidan izin verin, **Baglantiyi Test Et** ile dogrulayin.
+5. Ayarlar ekraninda bu degerleri girip **Google Drive'a Bagla** ile tarayicidan izin verin, **Baglantiyi Test Et** ile dogrulayin.
 6. Ileride farkli bir Google hesabina gecmek isterseniz **Hesabi Degistir** ile mevcut baglantiyi kaldirip yeniden baglanabilirsiniz.
+
+## E-posta bildirimleri icin
+
+Gmail hesabinizda 2 adimli dogrulamayi acip https://myaccount.google.com/apppasswords adresinden bir "Uygulama Sifresi" olusturun (normal Gmail sifreniz calismaz). Bu 16 haneli sifreyi ayarlar ekranindaki "Uygulama Sifresi" alanina girin.
 
 ## Onemli not: veritabani dosyasi kilidi
 
-`.fdb` dosyalari Firebird veritabani motoru tarafindan kullanilir. Eger Netsim sadece kendi icine gomulu (embedded) Firebird kullaniyorsa, `Ofisnet.exe`'yi kapatmak dosya kilidini de kaldirir. Ama bazi kurulumlarda ayrica calisan bir **Firebird Server Windows servisi** olabilir; boyle durumlarda programi kapatmak yetmeyebilir.
-
-Ilk test yedeklemesinden sonra zip icindeki dosyalarin saglikli oldugunu kontrol edin. Sorun varsa, "Hizmetler" (services.msc) ekraninda adinda "Firebird" gecen bir servis olup olmadigina bakip adini ayar penceresindeki **Firebird Windows servis adi** alanina yazin; yedekleme sirasinda bu servis de otomatik durdurulup sonra yeniden baslatilir.
+`.fdb` dosyalari Firebird veritabani motoru tarafindan kullanilir. Eger Netsim sadece kendi icine gomulu (embedded) Firebird kullaniyorsa, programi kapatmak dosya kilidini de kaldirir. Bazi kurulumlarda ayrica calisan bir **Firebird Server Windows servisi** olabilir; boyle durumlarda programi kapatmak yetmeyebilir. Ilk test yedeklemesinden sonra zip icindeki dosyalarin saglikli oldugunu kontrol edin; sorun varsa "Hizmetler" (services.msc) ekraninda ilgili servisin adini ayarlardaki **Firebird Windows servis adi** alanina yazin.
 
 ## Guvenlik notlari
 
-- Google Client Secret ve Drive refresh token, Windows DPAPI ile bu bilgisayara ozel sifrelenmis halde saklanir; baska bir bilgisayara kopyalandiginda cozulemez.
+- Google Client Secret, Drive refresh token ve e-posta uygulama sifresi Electron'un `safeStorage` API'siyle (Windows'ta DPAPI kullanir) bu bilgisayara ozel sifrelenmis halde saklanir.
 - Google Drive erisimi `drive.file` kapsamiyla sinirlidir: uygulama sadece kendi olusturdugu dosya/klasorlere erisebilir.
 
 ## Guncelleme
 
-Bu proje https://github.com/hamzaalmali/netsim-yedek adresinde (private) tutuluyor. Guncelleme geldiginde ayar penceresinde sari bir serit cikar.
-
-- **Git kuruluysa:** klasor icinde `git pull` calistirmaniz yeterli (uygulamayi tepsiden "Cikis" ile kapatip tekrar acmayi unutmayin).
-- **Git yoksa:** repo sayfasinda **Code > Download ZIP** ile indirip acin; `Config\` klasorunuzu (ayarlariniz ve Google baglantiniz orada) yeni surumun uzerine kopyalarken **ezmeyin/silmeyin**, digital dosyalarin ustune yazabilirsiniz.
+Bu proje https://github.com/hamzaalmali/netsim-yedek adresinde tutuluyor. Yeni bir surum yayinlandiginda (GitHub Releases) ayarlar ekraninda sari bir bildirim seridi cikar; "GitHub'da Ac" ile indirme sayfasina gidip yeni kurulum dosyasini calistirmaniz yeterlidir (eski surumun uzerine kurulabilir, ayarlar `%APPDATA%` altinda tutuldugu icin silinmez).
 
 ## Sorun giderme
 
-- `Logs\backup_YYYY-MM-DD.log` her yedeklemenin adim adim kaydini tutar.
+- Loglar: `%APPDATA%\netsim-yedekleme\Logs\backup_YYYY-MM-DD.log`
 - Uygulamayi tamamen kapatmak icin tepsi simgesine sag tiklayip **Cikis** secin.
 - "Baglantiyi Test Et" hata veriyorsa Client ID/Secret'i, Drive API'nin projede etkin oldugunu ve test kullanicisi olarak dogru hesabin eklendigini kontrol edin.

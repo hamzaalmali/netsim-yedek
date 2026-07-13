@@ -1,0 +1,46 @@
+{
+  "name": "netsim-yedekleme",
+  "version": "3.0.0",
+  "description": "Netsim Otomasyon veritabani dosyalarini gunluk olarak Google Drive'a ve ek konumlara yedekleyen sistem tepsisi uygulamasi",
+  "main": "src/main.js",
+  "author": "Netsim Yedekleme",
+  "license": "UNLICENSED",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder"
+  },
+  "dependencies": {
+    "archiver": "^7.0.1",
+    "nodemailer": "^6.9.16"
+  },
+  "devDependencies": {
+    "electron": "^32.0.0",
+    "electron-builder": "^25.0.0"
+  },
+  "build": {
+    "appId": "com.netsim.yedekleme",
+    "productName": "Netsim Yedekleme",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "src/**/*",
+      "renderer/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "build/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    }
+  },
+  "allowScripts": {
+    "electron@32.3.3": true
+  }
+}

@@ -3,3 +3,6 @@ Config/refresh_token.dat
 Logs/
 Staging/
 .claude/
+vm-dev-setup.ps1
+node_modules/
+release/
