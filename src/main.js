@@ -1,4 +1,4 @@
-const { app, BrowserWindow, Tray, Menu, ipcMain, dialog, nativeImage } = require('electron');
+const { app, BrowserWindow, Tray, Menu, ipcMain, dialog, nativeImage, powerMonitor } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const configModule = require('./config');
@@ -26,14 +26,14 @@ if (!gotLock) {
 
   function createWindow() {
     mainWindow = new BrowserWindow({
-      width: 800,
-      height: 840,
-      minWidth: 700,
-      minHeight: 600,
+      width: 1040,
+      height: 860,
+      minWidth: 900,
+      minHeight: 640,
       icon: path.join(__dirname, '..', 'build', 'icon.png'),
       autoHideMenuBar: true,
       show: false,
-      backgroundColor: '#F8FAFC',
+      backgroundColor: '#171717',
       webPreferences: {
         preload: path.join(__dirname, 'preload.js'),
         contextIsolation: true,
@@ -110,19 +110,36 @@ if (!gotLock) {
     return { started: true };
   }
 
+  function localDateStr(d) {
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  }
+
+  function checkSchedule() {
+    if (backupInProgress) return;
+    const cfg = configModule.load();
+    const now = new Date();
+    const todayStr = localDateStr(now);
+    const nowStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+
+    let state = cfg.schedulerState;
+    if (!state || state.date !== todayStr) state = { date: todayStr, firedTimes: [] };
+
+    const times = Array.isArray(cfg.backupTimes) && cfg.backupTimes.length ? cfg.backupTimes : ['23:30'];
+    const dueSlot = times.find((t) => t <= nowStr && !state.firedTimes.includes(t));
+
+    if (dueSlot) {
+      state.firedTimes.push(dueSlot);
+      cfg.schedulerState = state;
+      configModule.save(cfg);
+      triggerBackup();
+    } else if (!cfg.schedulerState || cfg.schedulerState.date !== state.date) {
+      cfg.schedulerState = state;
+      configModule.save(cfg);
+    }
+  }
+
   function startScheduler() {
-    schedulerTimer = setInterval(() => {
-      if (backupInProgress) return;
-      const cfg = configModule.load();
-      const now = new Date();
-      const hh = String(now.getHours()).padStart(2, '0');
-      const mm = String(now.getMinutes()).padStart(2, '0');
-      const nowStr = `${hh}:${mm}`;
-      const todayStr = now.toISOString().slice(0, 10);
-      if (nowStr === cfg.backupTime && cfg.lastRunDate !== todayStr) {
-        triggerBackup();
-      }
-    }, 30000);
+    schedulerTimer = setInterval(checkSchedule, 30000);
   }
 
   let isFirstRunFlag = false;
@@ -132,6 +149,11 @@ if (!gotLock) {
     createTray();
     createWindow();
     startScheduler();
+    try {
+      powerMonitor.on('resume', () => setTimeout(checkSchedule, 2000));
+    } catch {
+      /* platform desteklemiyor */
+    }
   });
 
   app.on('window-all-closed', () => {
@@ -164,7 +186,10 @@ if (!gotLock) {
     cfg.sourcePath = formData.sourcePath;
     cfg.processExePath = formData.processExePath;
     cfg.firebirdServiceName = formData.firebirdServiceName;
-    cfg.backupTime = formData.backupTime;
+    const timeRe = /^([01]\d|2[0-3]):[0-5]\d$/;
+    const times = Array.isArray(formData.backupTimes) ? formData.backupTimes.filter((t) => timeRe.test(t)) : [];
+    cfg.backupTimes = times.length ? times : cfg.backupTimes;
+    cfg.dailyBackupCount = cfg.backupTimes.length;
     cfg.autoRestartAfterBackup = formData.autoRestartAfterBackup;
     cfg.retentionCount = formData.retentionCount;
     cfg.extraDestinations = formData.extraDestinations;

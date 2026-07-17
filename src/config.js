@@ -11,7 +11,9 @@ function defaults() {
     sourcePath: '',
     processExePath: '',
     firebirdServiceName: '',
-    backupTime: '23:30',
+    dailyBackupCount: 1,
+    backupTimes: ['23:30'],
+    schedulerState: { date: '', firedTimes: [] },
     autoRestartAfterBackup: true,
     retentionCount: 5,
     extraDestinations: [],
@@ -54,12 +56,20 @@ function deepMerge(base, override) {
 }
 
 function load() {
+  let parsed = {};
   try {
-    const raw = fs.readFileSync(configPath(), 'utf-8');
-    return deepMerge(defaults(), JSON.parse(raw));
+    parsed = JSON.parse(fs.readFileSync(configPath(), 'utf-8'));
   } catch {
-    return defaults();
+    parsed = {};
   }
+  const cfg = deepMerge(defaults(), parsed);
+  const timeRe = /^([01]\d|2[0-3]):[0-5]\d$/;
+  if (!Array.isArray(parsed.backupTimes) || parsed.backupTimes.length === 0) {
+    cfg.backupTimes = timeRe.test(parsed.backupTime) ? [parsed.backupTime] : defaults().backupTimes;
+  }
+  cfg.dailyBackupCount = cfg.backupTimes.length;
+  delete cfg.backupTime;
+  return cfg;
 }
 
 function save(cfg) {

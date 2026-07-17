@@ -1,7 +1,39 @@
 let extraDestinations = [];
+let backupTimes = ['23:30'];
 
 function $(id) {
   return document.getElementById(id);
+}
+
+function renderTimesList() {
+  const container = $('timesList');
+  container.innerHTML = '';
+  backupTimes.forEach((t, idx) => {
+    const row = document.createElement('div');
+    row.className = 'time-item';
+
+    const label = document.createElement('span');
+    label.textContent = `${idx + 1}. yedek saati`;
+
+    const input = document.createElement('input');
+    input.type = 'time';
+    input.className = 'input input-sm';
+    input.value = t || '23:30';
+    input.addEventListener('change', () => {
+      backupTimes[idx] = input.value;
+    });
+
+    row.appendChild(label);
+    row.appendChild(input);
+    container.appendChild(row);
+  });
+}
+
+function syncBackupTimesCount(count) {
+  count = Math.max(1, Math.min(10, count || 1));
+  while (backupTimes.length < count) backupTimes.push('23:30');
+  backupTimes.length = count;
+  renderTimesList();
 }
 
 function showToast(message, type = '') {
@@ -98,7 +130,9 @@ async function loadConfig() {
   $('tbSource').value = cfg.sourcePath || '';
   $('tbExe').value = cfg.processExePath || '';
   $('tbFirebird').value = cfg.firebirdServiceName || '';
-  $('tbTime').value = cfg.backupTime || '23:30';
+  backupTimes = cfg.backupTimes && cfg.backupTimes.length ? cfg.backupTimes.slice() : ['23:30'];
+  $('numBackupCount').value = backupTimes.length;
+  renderTimesList();
   $('chkRestart').checked = !!cfg.autoRestartAfterBackup;
   $('numRetention').value = cfg.retentionCount || 5;
 
@@ -144,7 +178,7 @@ function collectFormData() {
     sourcePath: $('tbSource').value,
     processExePath: $('tbExe').value,
     firebirdServiceName: $('tbFirebird').value,
-    backupTime: $('tbTime').value,
+    backupTimes: backupTimes.slice(),
     autoRestartAfterBackup: $('chkRestart').checked,
     retentionCount: parseInt($('numRetention').value, 10) || 5,
     extraDestinations,
@@ -199,6 +233,10 @@ function wireEvents() {
   $('selProcess').addEventListener('change', () => {
     if ($('selProcess').value) $('tbExe').value = $('selProcess').value;
   });
+
+  $('numBackupCount').addEventListener('input', () =>
+    syncBackupTimesCount(parseInt($('numBackupCount').value, 10))
+  );
 
   $('chkDrive').addEventListener('change', () => setDriveFieldsEnabled($('chkDrive').checked));
   $('chkEmail').addEventListener('change', () => setEmailFieldsEnabled($('chkEmail').checked));
@@ -276,9 +314,9 @@ function wireEvents() {
   });
 
   $('btnSave').addEventListener('click', async () => {
-    const timeVal = $('tbTime').value;
-    if (!/^\d{2}:\d{2}$/.test(timeVal)) {
-      showToast('Gecerli bir saat secin.', 'error');
+    const timeRe = /^([01]\d|2[0-3]):[0-5]\d$/;
+    if (!backupTimes.length || backupTimes.some((t) => !timeRe.test(t))) {
+      showToast('Gecerli yedekleme saatleri secin.', 'error');
       return;
     }
     const hasExtra = extraDestinations.some((d) => d.enabled);
