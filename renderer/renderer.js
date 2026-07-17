@@ -335,11 +335,7 @@ function wireEvents() {
 
   window.api.onBackupFinished((result) => {
     loadConfig();
-    if (result.skipped) {
-      showToast('Veri degismedi, yedekleme atlandi.');
-    } else {
-      showToast(result.success ? 'Yedekleme tamamlandi.' : 'Yedekleme basarisiz oldu.', result.success ? 'success' : 'error');
-    }
+    showToast(result.success ? 'Yedekleme tamamlandi.' : 'Yedekleme basarisiz oldu.', result.success ? 'success' : 'error');
   });
 }
 

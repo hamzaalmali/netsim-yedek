@@ -100,7 +100,7 @@ if (!gotLock) {
     tray.setToolTip('Netsim Yedekleme');
     const menu = Menu.buildFromTemplate([
       { label: 'Ayarlari Ac', click: () => showWindow() },
-      { label: 'Simdi Yedekle', click: () => triggerBackup(true) },
+      { label: 'Simdi Yedekle', click: () => triggerBackup() },
       { type: 'separator' },
       {
         label: 'Cikis',
@@ -114,20 +114,16 @@ if (!gotLock) {
     tray.on('double-click', () => showWindow());
   }
 
-  async function triggerBackup(force = false) {
+  async function triggerBackup() {
     if (backupInProgress) return { started: false };
     backupInProgress = true;
     notify('Netsim Yedekleme', 'Yedekleme basladi...');
     if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('backup-started');
-    const result = await runBackup({ logDir: logDir(), stagingDir: stagingDir() }, { force });
+    const result = await runBackup({ logDir: logDir(), stagingDir: stagingDir() });
     backupInProgress = false;
     notify(
       'Netsim Yedekleme',
-      result.skipped
-        ? 'Veri degismedi, yedekleme atlandi.'
-        : result.success
-        ? 'Yedekleme tamamlandi.'
-        : `Yedekleme basarisiz: ${result.error}`
+      result.success ? 'Yedekleme tamamlandi.' : `Yedekleme basarisiz: ${result.error}`
     );
     if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('backup-finished', result);
     return { started: true };
@@ -297,7 +293,7 @@ if (!gotLock) {
     return { ok: true };
   });
 
-  ipcMain.handle('backup:now', () => triggerBackup(true));
+  ipcMain.handle('backup:now', () => triggerBackup());
 
   ipcMain.handle('autostart:get', () => app.getLoginItemSettings().openAtLogin);
   ipcMain.handle('autostart:set', (e, enabled) => {

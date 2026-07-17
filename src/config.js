@@ -34,7 +34,6 @@ function defaults() {
       notifyOnFailure: true,
     },
     lastRunDate: '',
-    lastBackupSourceMtime: 0,
   };
 }
 

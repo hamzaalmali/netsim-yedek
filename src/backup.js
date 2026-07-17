@@ -77,34 +77,6 @@ async function startNetsimProcess(cfg, logDir) {
   }
 }
 
-function getLatestMtime(dirPath) {
-  let latest = 0;
-  const stack = [dirPath];
-  while (stack.length) {
-    const current = stack.pop();
-    let entries;
-    try {
-      entries = fs.readdirSync(current, { withFileTypes: true });
-    } catch {
-      continue;
-    }
-    for (const entry of entries) {
-      const full = path.join(current, entry.name);
-      if (entry.isDirectory()) {
-        stack.push(full);
-      } else {
-        try {
-          const mtime = fs.statSync(full).mtimeMs;
-          if (mtime > latest) latest = mtime;
-        } catch {
-          /* dosya okunamadi, atla */
-        }
-      }
-    }
-  }
-  return latest;
-}
-
 function createZip(sourcePath, destZipPath) {
   return new Promise((resolve, reject) => {
     const output = fs.createWriteStream(destZipPath);
@@ -172,20 +144,12 @@ async function sendEmailNotification(cfg, logDir, result) {
   }
 }
 
-async function runBackup(paths, options = {}) {
+async function runBackup(paths) {
   const { logDir, stagingDir } = paths;
-  const { force = false } = options;
   const cfg = configModule.load();
   let result;
   try {
     log(logDir, '===== Yedekleme basladi =====');
-
-    const latestMtime = getLatestMtime(cfg.sourcePath);
-    if (!force && latestMtime > 0 && cfg.lastBackupSourceMtime && latestMtime <= cfg.lastBackupSourceMtime) {
-      log(logDir, 'Veri klasorunde onceki yedeklemeden bu yana degisiklik yok, yedekleme atlandi.');
-      return { success: true, skipped: true, lastRunDate: cfg.lastRunDate };
-    }
-
     const wasRunning = await stopNetsimProcess(cfg, logDir);
 
     if (!fs.existsSync(stagingDir)) fs.mkdirSync(stagingDir, { recursive: true });
@@ -230,7 +194,6 @@ async function runBackup(paths, options = {}) {
     removeOldLocalBackups(stagingDir, cfg.retentionCount, logDir);
 
     cfg.lastRunDate = new Date().toISOString().slice(0, 10);
-    cfg.lastBackupSourceMtime = latestMtime;
     configModule.save(cfg);
     log(logDir, '===== Yedekleme tamamlandi =====');
     result = { success: true, lastRunDate: cfg.lastRunDate };
