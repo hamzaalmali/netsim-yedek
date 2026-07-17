@@ -27,24 +27,28 @@ async function isProcessRunning(exePath) {
 }
 
 async function stopNetsimProcess(cfg, logDir) {
-  if (!cfg.processExePath) return false;
-  const name = path.basename(cfg.processExePath);
-  const running = await isProcessRunning(cfg.processExePath);
-  if (running) {
-    log(logDir, `Program kapatiliyor: ${name}`);
-    try {
-      await execFileAsync('taskkill', ['/IM', name]);
-    } catch {
-      /* may already be gracefully closing */
-    }
-    await new Promise((r) => setTimeout(r, 5000));
-    if (await isProcessRunning(cfg.processExePath)) {
-      log(logDir, 'Program kapanmadi, zorla sonlandiriliyor.');
+  let running = false;
+  if (cfg.processExePath) {
+    const name = path.basename(cfg.processExePath);
+    running = await isProcessRunning(cfg.processExePath);
+    if (running) {
+      log(logDir, `Program kapatiliyor: ${name}`);
       try {
-        await execFileAsync('taskkill', ['/IM', name, '/F']);
+        await execFileAsync('taskkill', ['/IM', name]);
       } catch {
-        /* ignore */
+        /* may already be gracefully closing */
       }
+      await new Promise((r) => setTimeout(r, 5000));
+      if (await isProcessRunning(cfg.processExePath)) {
+        log(logDir, 'Program kapanmadi, zorla sonlandiriliyor.');
+        try {
+          await execFileAsync('taskkill', ['/IM', name, '/F']);
+        } catch {
+          /* ignore */
+        }
+      }
+    } else {
+      log(logDir, 'Program zaten calismiyor, kapatma adimi atlandi.');
     }
   }
   if (cfg.firebirdServiceName) {
@@ -69,6 +73,7 @@ async function startNetsimProcess(cfg, logDir) {
   if (cfg.processExePath && fs.existsSync(cfg.processExePath)) {
     try {
       const child = execFile(cfg.processExePath, [], { detached: true, stdio: 'ignore' });
+      child.on('error', (e) => log(logDir, `Program yeniden baslatilamadi: ${e.message}`, 'WARN'));
       child.unref();
       log(logDir, `Program yeniden baslatildi: ${cfg.processExePath}`);
     } catch (e) {
