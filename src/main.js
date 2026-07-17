@@ -22,6 +22,25 @@ if (!gotLock) {
   const logDir = () => path.join(userDataDir(), 'Logs');
   const stagingDir = () => path.join(userDataDir(), 'Staging');
 
+  function logCrash(source, err) {
+    try {
+      const dir = logDir();
+      if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+      const line = `${new Date().toISOString().replace('T', ' ').slice(0, 19)} [${source}] ${err && err.stack ? err.stack : err}\n`;
+      fs.appendFileSync(path.join(dir, 'crash.log'), line);
+    } catch {
+      /* loglama basarisiz olsa da uygulamanin ayakta kalmasi onceliklidir */
+    }
+  }
+
+  process.on('uncaughtException', (err) => {
+    logCrash('uncaughtException', err);
+    backupInProgress = false;
+  });
+  process.on('unhandledRejection', (err) => {
+    logCrash('unhandledRejection', err);
+  });
+
   app.on('second-instance', () => showWindow());
 
   function createWindow() {
@@ -81,7 +100,7 @@ if (!gotLock) {
     tray.setToolTip('Netsim Yedekleme');
     const menu = Menu.buildFromTemplate([
       { label: 'Ayarlari Ac', click: () => showWindow() },
-      { label: 'Simdi Yedekle', click: () => triggerBackup() },
+      { label: 'Simdi Yedekle', click: () => triggerBackup(true) },
       { type: 'separator' },
       {
         label: 'Cikis',
@@ -95,16 +114,20 @@ if (!gotLock) {
     tray.on('double-click', () => showWindow());
   }
 
-  async function triggerBackup() {
+  async function triggerBackup(force = false) {
     if (backupInProgress) return { started: false };
     backupInProgress = true;
     notify('Netsim Yedekleme', 'Yedekleme basladi...');
     if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('backup-started');
-    const result = await runBackup({ logDir: logDir(), stagingDir: stagingDir() });
+    const result = await runBackup({ logDir: logDir(), stagingDir: stagingDir() }, { force });
     backupInProgress = false;
     notify(
       'Netsim Yedekleme',
-      result.success ? 'Yedekleme tamamlandi.' : `Yedekleme basarisiz: ${result.error}`
+      result.skipped
+        ? 'Veri degismedi, yedekleme atlandi.'
+        : result.success
+        ? 'Yedekleme tamamlandi.'
+        : `Yedekleme basarisiz: ${result.error}`
     );
     if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('backup-finished', result);
     return { started: true };
@@ -274,7 +297,7 @@ if (!gotLock) {
     return { ok: true };
   });
 
-  ipcMain.handle('backup:now', () => triggerBackup());
+  ipcMain.handle('backup:now', () => triggerBackup(true));
 
   ipcMain.handle('autostart:get', () => app.getLoginItemSettings().openAtLogin);
   ipcMain.handle('autostart:set', (e, enabled) => {
